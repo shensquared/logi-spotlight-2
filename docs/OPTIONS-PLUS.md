@@ -6,8 +6,9 @@ to reproduce. `PROTOCOL.md` covers the wire format.
 
 ## Buttons
 
-Four buttons, not three. The Highlight button sits beside the Action button at
-the top, and the two arrows sit below.
+Four buttons. Action is the big round button on the top face, Highlight is on
+the right edge, and the two arrows sit below Action. The mapping from these
+names to CIDs is in `PROTOCOL.md`.
 
 | Button | Gesture | Action |
 |---|---|---|

@@ -119,44 +119,51 @@ Whatever Options+ configures, it configures on the host.
 
 | # | CID | TID | Flags | xFlags | Observed as |
 |---|---|---|---|---|---|
-| 0 | `0x0050` | `0x0038` | `0x31` | `0x04` | Action, single click |
-| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | a press and hold, button disputed |
+| 0 | `0x0050` | `0x0038` | `0x31` | `0x04` | big top button, click |
+| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | big top button, press and hold |
 | 2 | `0x01a8` | `0x00bb` | `0x31` | `0x07` | not seen |
-| 3 | `0x00d9` | `0x00b6` | `0x30` | `0x04` | Next, single click |
+| 3 | `0x00d9` | `0x00b6` | `0x30` | `0x04` | back arrow, click |
 | 4 | `0x00da` | `0x00bc` | `0x30` | `0x07` | not seen |
-| 5 | `0x00db` | `0x00b8` | `0x30` | `0x04` | Back, single click |
-| 6 | `0x00dc` | `0x00bd` | `0x30` | `0x07` | Back, press and hold |
-| 7 | `0x00fb` | `0x00ce` | `0x30` | `0x04` | Highlight, one press |
-| 8 | `0x00fc` | `0x0062` | `0x20` | `0x04` | Highlight, most presses |
-| 9 | `0x01b0` | `0x0116` | `0x30` | `0x04` | one press, unattributed |
+| 5 | `0x00db` | `0x00b8` | `0x30` | `0x04` | forward arrow, click |
+| 6 | `0x00dc` | `0x00bd` | `0x30` | `0x04` | forward arrow, press and hold |
+| 7 | `0x00fb` | `0x00ce` | `0x30` | `0x04` | side button, click |
+| 8 | `0x00fc` | `0x0062` | `0x20` | `0x04` | side button, press and hold |
+| 9 | `0x01b0` | `0x0116` | `0x30` | `0x04` | seen once, unattributed |
 
 Mapped by diverting all ten and pressing in timed groups, in
-`snapshots/2026-08-13-cid-mapping-run.txt`. The first six rows are solid: each
-fired the expected number of times in its own window and nothing else did.
+`snapshots/`. Every group above landed entirely inside its own window with
+nothing else firing, across two runs that agree.
+
+Against the names in `OPTIONS-PLUS.md`, the big button on the top face is
+Action and the button on the right edge is Highlight. Holding Action is the
+laser pointer, which is why that button moves the cursor with no software,
+and Highlight does nothing without software because it only ever asks a host
+to draw.
 
 A press and a hold of the same button are separate CIDs, so the device does the
 timing. A double click is not: three double clicks on Action produced six
 `0x0050` frames in three tight pairs, 0.2 s apart, so the host counts those
 itself.
 
-`0x00d8` is not settled. One run attributes it to holding Action, another to
-holding Highlight, and both are self-consistent. The runs named buttons rather
-than locating them, so which one was pressed is not recoverable from the logs.
+Whether the side button's two CIDs separate a soft press from a hard one, or
+just a click from a hold, is untested. The run that produced them asked for a
+click and then a hold, so duration is the simpler reading, and Options+ offers
+a sensitivity setting that only makes sense for pressure.
 
-The Highlight rows are not settled either. One run produced `0x00fb` once,
-`0x01b0` once and `0x00fc` five times across its presses, with no clean split
-between the gentle and firm groups.
+### Raw XY does not redirect motion
 
-### Raw XY delivers no motion
+With raw XY confirmed set on all four capable controls, motion still arrives on
+the ordinary mouse collection and none arrives as a HID++ notification.
 
-With raw XY confirmed set on all four capable controls, holding a control down
-and waving the remote for fifteen seconds produced only press and release
-frames, in `snapshots/2026-08-14-highlight-rawxy-run.txt`. No streaming deltas
-arrived on the vendor collection.
+    26.29s  0001:0002  id=02 | 02 00 00 fb ff 06 00 00 00    X -5,  Y +6
+    77.57s  0001:0002  id=02 | 02 00 00 c1 ff 7f 00 00 00    X -63, Y +127
 
-That run watched only the vendor collection, so it cannot say whether motion
-kept flowing to the mouse collection or stopped. Until a run watches both at
-once, raw XY is set and doing nothing observable.
+Both frames landed while `0x00d8` was held, and none arrived outside a hold, so
+the gyro reports only while a pointing control is down. Setting the bit changes
+nothing observable, and a host wanting motion reads the mouse collection.
+
+The cursor moves with it. Suppressing that is the host's problem, which matches
+the Cursor Control toggle Options+ offers in `OPTIONS-PLUS.md`.
 
 `0x01a8` and `0x00da` never fired. Both carry raw XY, as do `0x00d8` and
 `0x00dc`, which did fire on the two press-and-hold actions. `0x00d8` is the
@@ -274,15 +281,13 @@ receiver announcing device 4 is back, and a burst of enumeration follows it.
 
 ## Open questions
 
-1. Which CIDs the Highlight button uses, and whether a soft and a firm press
-   are different controls. Three CIDs appeared across its presses with no clean
-   split.
+1. What `0x01a8`, `0x00da` and `0x01b0` are. None belongs to a button on its
+   own; the four buttons are accounted for by the other seven controls.
 2. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. Options+ has a
    haptic feedback panel and a timer, so the vibration motor and the timer are
    reachable over HID++ and live among these. `0x19b0` answers
    `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like durations.
 3. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
-4. Where raw XY sends motion. Setting it made neither `0x01a8` nor `0x00da`
-   fire and produced no deltas on the vendor collection.
+4. What the raw-XY bit does, given it changes nothing observable.
 5. What the 29-byte digitizer collection carries.
