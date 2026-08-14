@@ -143,6 +143,19 @@ highlight overlay gets gyro deltas while the system cursor stays put.
 Live divert state comes from `getCidReporting` function 2, where bit 0 of the
 flags byte is the divert bit.
 
+### Diverting
+
+`setCidReporting` function 3 takes the CID in the first two parameter bytes and
+a flags byte third. Each setting is a value bit paired with a validity bit, so
+`0x03` is divert-on and `0x02` hands the control back.
+
+All ten controls accept the divert. Reading them back with function 2 returns
+`0x01` for every one. Writing the recorded original state back restores them
+exactly, `0x0050` included.
+
+CID `0x0050` reads as diverted before anything writes to the device, and stays
+that way across a restore that puts back what it found.
+
 ## Power and hosts
 
 | Feature | Reading |
@@ -152,9 +165,11 @@ flags byte is the divert bit.
 
 ## Open questions
 
-1. Which CID belongs to which physical button. Mapping them needs either a
-   divert, so presses arrive as `0x1B04` notifications, or Input Monitoring, so
-   the native keyboard and mouse reports are visible.
+1. Which CID belongs to which physical button. With all ten diverted, a 45
+   second listen on the receiver's vendor collection caught no notification.
+   Either no button was pressed in that window, or presses do not arrive on
+   `0x1B04` on this device. Running `bin/divert` from a terminal and watching
+   live output separates the two.
 2. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250`, `0x1701` and `0x00c3` do. One of
    them is the likely home of the vibration motor that drives the timer alert.
 3. Why `getCidReporting` reports CID `0x0050` as already diverted when no

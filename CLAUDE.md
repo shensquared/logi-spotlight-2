@@ -40,6 +40,7 @@ No Logitech software is installed, so nothing competes for the device.
 | `receiver.c` | walk every Logitech HID++ endpoint, list live devices and their features |
 | `inspect.c` | one device's identity, battery, hosts and `0x1B04` control table |
 | `listen.c` | read-only report listener across every collection, never writes |
+| `divert.c` | divert the `0x1B04` controls, print presses, restore on exit |
 
 ## Build
 
