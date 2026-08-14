@@ -26,6 +26,7 @@ bin/inspect            # identity, battery, hosts and the 0x1B04 control table
 bin/inspect <name>     # same, for any device whose name contains <name>
 bin/listen 30          # print every report each collection emits, for 30 s
 bin/divert 45          # divert the 0x1B04 controls, print presses, then restore
+bin/divert 60 rawxy    # same, plus find the raw-XY bit and switch it on
 bin/probe              # call function 0 on the unnamed features
 ```
 

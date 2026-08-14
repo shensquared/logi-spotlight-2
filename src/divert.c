@@ -24,6 +24,9 @@ static uint8_t gWantIdx, gWantFeat, gWantFn;
 static uint8_t gDevIdx = 0, gFeat1b04 = 0;
 static uint16_t gCid[MAX_CIDS];
 static uint8_t gWasDiverted[MAX_CIDS];
+static uint8_t gRawCapable[MAX_CIDS];
+// Discovered raw-XY encoding, zero until a candidate is confirmed by read-back.
+static uint8_t gRawOn = 0, gRawOff = 0;
 static int gCidCount = 0;
 static volatile sig_atomic_t gStop = 0;
 static CFAbsoluteTime gListenStart = 0;
@@ -110,11 +113,45 @@ static void setDivert(uint16_t cid, int on) {
 
 static void restoreAll(void) {
     printf("\nrestoring %d controls\n", gCidCount);
-    for (int i = 0; i < gCidCount; i++) setDivert(gCid[i], gWasDiverted[i]);
+    for (int i = 0; i < gCidCount; i++) {
+        if (gRawOff && gRawCapable[i])
+            hidpp(gDevIdx, gFeat1b04, 0x03, (uint8_t)(gCid[i] >> 8),
+                  (uint8_t)gCid[i], gRawOff);
+        setDivert(gCid[i], gWasDiverted[i]);
+    }
+}
+
+// The divert bit is bit 0 with bit 1 as its validity flag. Raw XY sits
+// elsewhere in the same byte and the position is not established here, so try
+// each candidate and let the read-back say which one the device took.
+static void findRawXYEncoding(uint16_t cid) {
+    static const struct { uint8_t on, off; const char *where; } kCand[] = {
+        { 0x33, 0x23, "value bit 4, validity bit 5" },
+        { 0xC3, 0x83, "value bit 6, validity bit 7" },
+    };
+    uint8_t hi = (uint8_t)(cid >> 8), lo = (uint8_t)cid;
+    if (hidpp(gDevIdx, gFeat1b04, 0x02, hi, lo, 0) != 1) return;
+    uint8_t base = gResp[6];
+    printf("\nprobing raw XY on CID 0x%04x, divert-only reads 0x%02x\n", cid, base);
+
+    for (size_t c = 0; c < sizeof kCand / sizeof kCand[0]; c++) {
+        hidpp(gDevIdx, gFeat1b04, 0x03, hi, lo, kCand[c].on);
+        if (hidpp(gDevIdx, gFeat1b04, 0x02, hi, lo, 0) != 1) continue;
+        printf("  flags 0x%02x (%s) reads 0x%02x%s\n", kCand[c].on, kCand[c].where,
+               gResp[6], gResp[6] != base ? "   <- took" : "");
+        if (gResp[6] != base) {
+            gRawOn = kCand[c].on;
+            gRawOff = kCand[c].off;
+            return;
+        }
+        hidpp(gDevIdx, gFeat1b04, 0x03, hi, lo, kCand[c].off);
+    }
+    printf("  no candidate changed the read-back\n");
 }
 
 int main(int argc, char **argv) {
     int secs = argc > 1 ? atoi(argv[1]) : 45;
+    int rawxy = argc > 2 && strcmp(argv[2], "rawxy") == 0;
     signal(SIGINT, onSig);
 
     IOHIDManagerRef mgr = IOHIDManagerCreate(kCFAllocatorDefault, kIOHIDOptionsTypeNone);
@@ -177,11 +214,13 @@ int main(int argc, char **argv) {
     for (int i = 0; i < count; i++) {
         if (hidpp(gDevIdx, gFeat1b04, 0x01, (uint8_t)i, 0, 0) != 1) continue;
         uint16_t cid = (uint16_t)((gResp[4] << 8) | gResp[5]);
+        uint8_t raw = gResp[12] & 0x01;   // read before function 2 overwrites it
         uint8_t was = 0;
         if (hidpp(gDevIdx, gFeat1b04, 0x02, (uint8_t)(cid >> 8), (uint8_t)cid, 0) == 1)
             was = gResp[6] & 0x01;
         gCid[gCidCount] = cid;
         gWasDiverted[gCidCount] = was;
+        gRawCapable[gCidCount] = raw;
         gCidCount++;
     }
 
@@ -193,6 +232,27 @@ int main(int argc, char **argv) {
         if (hidpp(gDevIdx, gFeat1b04, 0x02, (uint8_t)(gCid[i] >> 8),
                   (uint8_t)gCid[i], 0) == 1)
             printf("  0x%04x  0x%02x\n", gCid[i], gResp[6]);
+    }
+
+    if (rawxy) {
+        int first = -1;
+        for (int i = 0; i < gCidCount && first < 0; i++)
+            if (gRawCapable[i]) first = i;
+        if (first < 0) printf("\nno control advertises raw XY\n");
+        else {
+            findRawXYEncoding(gCid[first]);
+            if (gRawOn) {
+                printf("\nsetting raw XY on every capable control\n");
+                for (int i = 0; i < gCidCount; i++) {
+                    if (!gRawCapable[i]) continue;
+                    hidpp(gDevIdx, gFeat1b04, 0x03, (uint8_t)(gCid[i] >> 8),
+                          (uint8_t)gCid[i], gRawOn);
+                    if (hidpp(gDevIdx, gFeat1b04, 0x02, (uint8_t)(gCid[i] >> 8),
+                              (uint8_t)gCid[i], 0) == 1)
+                        printf("  0x%04x reads 0x%02x\n", gCid[i], gResp[6]);
+                }
+            }
+        }
     }
 
     printf("\nlistening %d s. Press each button in turn.\n"
