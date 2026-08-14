@@ -209,12 +209,13 @@ test it, at the cost of a persistent write.
 2. Whether writing a configuration cookie through `0x0020` function 1 changes
    that, and whether onboarding the remote once through Options+ on any machine
    does.
-3. Which CID belongs to which physical button. The remote has three buttons on
-   its face and reports ten controls, so most are unreachable combinations or
-   long-press variants.
-4. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. `0x19b0`
-   answers `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like
-   durations, which would suit the presentation timer.
+3. Which CID belongs to which physical button. There are four buttons and ten
+   controls, because the Highlight button is force-sensitive and reports soft
+   and hard presses separately. `OPTIONS-PLUS.md` has the vendor's own mapping.
+4. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. Options+ has a
+   haptic feedback panel and a timer, so the vibration motor and the timer are
+   reachable over HID++ and live among these. `0x19b0` answers
+   `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like durations.
 5. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
 6. Whether raw XY delivers usable gyro deltas, and on which report.

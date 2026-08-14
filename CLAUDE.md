@@ -31,6 +31,8 @@ No Logitech software is installed, so nothing competes for the device.
 ## Layout
 
 - `docs/PROTOCOL.md` is the wire-format reference. Read it before touching bytes.
+- `docs/OPTIONS-PLUS.md` is the vendor's own account of the buttons and effects,
+  which sets the target for what a host has to reproduce.
 - `src/*.c` are dependency-free IOKit probes, one concern each. Each file is
   self-contained, so the HID++ request and reply-matching code repeats across
   them rather than living in a shared header.
