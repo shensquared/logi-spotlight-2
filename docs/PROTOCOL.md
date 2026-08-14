@@ -156,6 +156,44 @@ exactly, `0x0050` included.
 CID `0x0050` reads as diverted before anything writes to the device, and stays
 that way across a restore that puts back what it found.
 
+## Feature probes
+
+Function 0 on the features with no published name, which by HID++ 2.0
+convention is `getCapabilities` or `getInfo`.
+
+| Feature | idx | Function 0 reply |
+|---|---|---|
+| `0x0011` | `0x08` | error `0x02` |
+| `0x0020` | `0x05` | all zero |
+| `0x0021` | `0x06` | `xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx` |
+| `0x00c3` | `0x13` | `00 00 1e 07 d9 db` |
+| `0x1701` | `0x0a` | `01 00 0a` |
+| `0x19b0` | `0x0f` | `00 1f 00 3c 00 0f ff ff` |
+| `0x19c0` | `0x10` | `01` |
+| `0x1a01` | `0x11` | all zero |
+| `0x1d4b` | `0x04` | error `0x07` |
+| `0x2250` | `0x0e` | `00 01` |
+
+`0x0020` is ConfigChange, whose function 0 reads a configuration cookie that
+vendor software writes when it sets a device up. On this remote the cookie is
+zero, and the remote has never been onboarded through Options+ on any machine.
+
+## Silence
+
+The remote answers every request instantly and initiates nothing. Across
+repeated tests it emitted no input report on any of its four collections, and
+none as a `0x1B04` notification with all ten controls diverted. Pressing its
+buttons produces no reaction on macOS and lights no LED.
+
+The receiver's own 15-second heartbeat is the only traffic on that receiver, so
+the listener and the callback are working. The MX Creative Keypad has the same
+signature and resolves it with the `0x0008` keepalive, but this remote has no
+`0x0008`.
+
+Whether the zero config cookie is the cause or merely another symptom of a
+never-configured device is untested. Writing a cookie with function 1 would
+test it, at the cost of a persistent write.
+
 ## Power and hosts
 
 | Feature | Reading |
@@ -165,14 +203,19 @@ that way across a restore that puts back what it found.
 
 ## Open questions
 
-1. Which CID belongs to which physical button. With all ten diverted, a 45
-   second listen on the receiver's vendor collection caught no notification.
-   Either no button was pressed in that window, or presses do not arrive on
-   `0x1B04` on this device. Running `bin/divert` from a terminal and watching
-   live output separates the two.
-2. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250`, `0x1701` and `0x00c3` do. One of
-   them is the likely home of the vibration motor that drives the timer alert.
-3. Why `getCidReporting` reports CID `0x0050` as already diverted when no
+1. Why the remote transmits nothing. This blocks everything else, since no
+   button can be mapped until some press reaches the host. See
+   [Silence](#silence).
+2. Whether writing a configuration cookie through `0x0020` function 1 changes
+   that, and whether onboarding the remote once through Options+ on any machine
+   does.
+3. Which CID belongs to which physical button. The remote has three buttons on
+   its face and reports ten controls, so most are unreachable combinations or
+   long-press variants.
+4. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. `0x19b0`
+   answers `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like
+   durations, which would suit the presentation timer.
+5. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
-4. Whether raw XY delivers usable gyro deltas, and on which report.
-5. What the 29-byte digitizer collection carries.
+6. Whether raw XY delivers usable gyro deltas, and on which report.
+7. What the 29-byte digitizer collection carries.

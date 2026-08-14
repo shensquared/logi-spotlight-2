@@ -41,6 +41,7 @@ No Logitech software is installed, so nothing competes for the device.
 | `inspect.c` | one device's identity, battery, hosts and `0x1B04` control table |
 | `listen.c` | read-only report listener across every collection, never writes |
 | `divert.c` | divert the `0x1B04` controls, print presses, restore on exit |
+| `probe.c` | call function 0 on the features with no published name |
 
 ## Build
 
