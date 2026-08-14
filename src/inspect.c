@@ -133,9 +133,20 @@ int main(int argc, char **argv) {
         printf("0x1004  battery %d%%, level 0x%02x, charging 0x%02x\n",
                gResp[4], gResp[5], gResp[6]);
 
+    // Printed raw as well as parsed, because the field offsets in the
+    // getHostsInfo reply are not confirmed for this device.
     f = findFeat(devIdx, 0x1815);
-    if (f && hidpp(devIdx, f, 0x00, 0, 0, 0) == 1)
-        printf("0x1815  %d host slots, currently on host %d\n", gResp[5], gResp[6]);
+    if (f && hidpp(devIdx, f, 0x00, 0, 0, 0) == 1) {
+        printf("0x1815  getHostsInfo raw |");
+        for (int i = 4; i < 14; i++) printf(" %02x", gResp[i]);
+        printf("\n");
+        for (int h = 0; h < 4; h++) {
+            if (hidpp(devIdx, f, 0x01, (uint8_t)h, 0, 0) != 1) continue;
+            printf("        host %d raw       |", h);
+            for (int i = 4; i < 14; i++) printf(" %02x", gResp[i]);
+            printf("\n");
+        }
+    }
 
     f = findFeat(devIdx, 0x1b04);
     if (!f || hidpp(devIdx, f, 0x00, 0, 0, 0) != 1) return 0;
