@@ -190,9 +190,21 @@ the listener and the callback are working. The MX Creative Keypad has the same
 signature and resolves it with the `0x0008` keepalive, but this remote has no
 `0x0008`.
 
-Whether the zero config cookie is the cause or merely another symptom of a
-never-configured device is untested. Writing a cookie with function 1 would
-test it, at the cost of a persistent write.
+Options+ on another machine drives the remote fine, using this same receiver
+carried over and the same host slot. Brought back, the remote is silent again.
+The two snapshots in `snapshots/` differ by one byte in the whole device state:
+host slot 0 gained a 14-character name where it had none. The `0x0020` cookie is
+still zero and every divert bit is unchanged.
+
+So nothing persistent is written during setup, and there is no onboarding step
+to reproduce. Whatever makes the remote transmit, Options+ does at runtime and
+undoes by exiting.
+
+That fits the rest of the picture. There is no `0x8100` OnboardProfiles, so the
+device stores no button assignments, and Options+ offers next-slide as one
+choice among several for each button. The remote cannot page a deck by itself.
+It can only report raw events and let software decide, which means a host that
+sends nothing gets nothing.
 
 ## Power and hosts
 
