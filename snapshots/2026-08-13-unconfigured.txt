@@ -1,0 +1,40 @@
+# Spotlight 2, never onboarded through Options+
+# captured 2026-08-13, unit id xxxxxxxx
+
+=== bin/inspect ===
+"Spotlight 2" at location 0x21130000, device index 0x04
+
+0x0003  unitId xxxxxxxx  modelId b506  transport 0002
+0x1004  battery 50%, level 0x04, charging 0x00
+0x1815  getHostsInfo raw | 13 08 02 00 00 00 00 00 00 00
+        host 0 raw       | 00 01 04 01 00 18 00 00 00 00
+        host 1 raw       | 01 00 00 00 00 18 00 00 00 00
+
+0x1b04 at index 0x0b, 10 controls
+
+  i   CID     TID     flags xflag divert  capability
+  --  ------  ------  ----- ----- ------  ----------
+   0  0x0050  0x0038  0x31  0x04  ON      mouse reprog divertable 
+   1  0x00d8  0x00b7  0x31  0x07  off     mouse reprog divertable rawXY forceRawXY 
+   2  0x01a8  0x00bb  0x31  0x07  off     mouse reprog divertable rawXY forceRawXY 
+   3  0x00d9  0x00b6  0x30  0x04  off     reprog divertable 
+   4  0x00da  0x00bc  0x30  0x07  off     reprog divertable rawXY forceRawXY 
+   5  0x00db  0x00b8  0x30  0x04  off     reprog divertable 
+   6  0x00dc  0x00bd  0x30  0x07  off     reprog divertable rawXY forceRawXY 
+   7  0x00fb  0x00ce  0x30  0x04  off     reprog divertable 
+   8  0x00fc  0x0062  0x20  0x04  off     divertable 
+   9  0x01b0  0x0116  0x30  0x04  off     reprog divertable 
+
+=== bin/probe ===
+"Spotlight 2" at device index 0x04
+
+  0x0011  idx 0x08  error 0x02
+  0x0020  idx 0x05  | 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00   ConfigChange, cookie a host writes at setup
+  0x0021  idx 0x06  | xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx xx   unique identifier
+  0x00c3  idx 0x13  | 00 00 1e 07 d9 db 00 00 00 00 00 00 00 00 00 00   answers function 0 only on the MX Keypad
+  0x1701  idx 0x0a  | 01 00 0a 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x19b0  idx 0x0f  | 00 1f 00 3c 00 0f ff ff 00 00 00 00 00 00 00 00
+  0x19c0  idx 0x10  | 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1a01  idx 0x11  | 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1d4b  idx 0x04  error 0x07   wireless device status
+  0x2250  idx 0x0e  | 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00
