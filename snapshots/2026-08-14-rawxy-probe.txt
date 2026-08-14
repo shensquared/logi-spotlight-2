@@ -1,0 +1,35 @@
+"Spotlight 2" at device index 0x04
+diverting 10 controls
+
+read back after divert
+  CID     flags
+  ------  -----
+  0x0050  0x01
+  0x00d8  0x01
+  0x01a8  0x01
+  0x00d9  0x01
+  0x00da  0x01
+  0x00db  0x01
+  0x00dc  0x01
+  0x00fb  0x01
+  0x00fc  0x01
+  0x01b0  0x01
+
+probing raw XY on CID 0x00d8, divert-only reads 0x01
+  flags 0x33 (value bit 4, validity bit 5) reads 0x11   <- took
+
+setting raw XY on every capable control
+  0x00d8 reads 0x11
+  0x01a8 reads 0x11
+  0x00da reads 0x11
+  0x00dc reads 0x11
+
+listening 60 s. Press each button in turn.
+Only frames with 0x00 in byte 3 are presses; acks are filtered.
+
+    8.54s  cid     0x0050  | 11 04 0b 00 00 50 00 00 00 00
+    8.59s  release 0x0000  | 11 04 0b 00 00 00 00 00 00 00
+
+restoring 10 controls
+
+[exited with code 0]

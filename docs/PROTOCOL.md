@@ -166,12 +166,28 @@ flags byte is the divert bit.
 ### Diverting
 
 `setCidReporting` function 3 takes the CID in the first two parameter bytes and
-a flags byte third. Each setting is a value bit paired with a validity bit, so
-`0x03` is divert-on and `0x02` hands the control back.
+a flags byte third. Each setting is a value bit paired with a validity bit, and
+only settings whose validity bit is set are changed.
 
-All ten controls accept the divert. Reading them back with function 2 returns
-`0x01` for every one. Writing the recorded original state back restores them
-exactly, `0x0050` included.
+| Bit | Meaning |
+|---|---|
+| 0 | divert |
+| 1 | divert is valid |
+| 4 | raw XY |
+| 5 | raw XY is valid |
+
+So `0x03` diverts, `0x02` hands the control back, `0x33` diverts with raw XY and
+`0x23` clears raw XY while leaving the divert alone.
+
+`getCidReporting` function 2 returns the values without the validity bits, so a
+diverted control reads `0x01` and a diverted control with raw XY reads `0x11`.
+
+Bit 4 was found by setting each candidate position and comparing the read-back,
+in `snapshots/2026-08-14-rawxy-probe.txt`, rather than assumed.
+
+All ten controls accept the divert, and all four that advertise raw XY accept
+that too. Writing the recorded original state back restores them exactly,
+`0x0050` included.
 
 CID `0x0050` reads as diverted before anything writes to the device, and stays
 that way across a restore that puts back what it found.
