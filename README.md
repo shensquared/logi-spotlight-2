@@ -37,11 +37,13 @@ device index has to be passed in.
 The remote enumerates, answers HID++ requests through a Logi Bolt receiver,
 reports its 10 reprogrammable controls, and accepts a divert on all of them.
 
-It also transmits nothing. No button press has produced a single input report
-on any collection, diverted or not, and none produces any reaction on macOS.
-Since the remote answers every request instantly, the radio link is fine and
-the remote is choosing not to send. That is the open problem, and everything
-else waits on it.
+Presses arrive as `0x1B04` notifications and gyro motion arrives on the mouse
+collection, both without Logitech software. The pointer already moves the system
+cursor unaided.
+
+What remains is mapping the ten controls to the four physical buttons, and
+finding the vibration motor and the timer among the features that answer but
+have no published name.
 
 `docs/PROTOCOL.md` records what the device has been observed to do, and what is
 still unknown.

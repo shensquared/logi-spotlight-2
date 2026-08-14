@@ -178,33 +178,41 @@ convention is `getCapabilities` or `getInfo`.
 vendor software writes when it sets a device up. On this remote the cookie is
 zero, and the remote has never been onboarded through Options+ on any machine.
 
-## Silence
+## Events
 
-The remote answers every request instantly and initiates nothing. Across
-repeated tests it emitted no input report on any of its four collections, and
-none as a `0x1B04` notification with all ten controls diverted. Pressing its
-buttons produces no reaction on macOS and lights no LED.
+A diverted control reports on report `0x11` with the `0x1B04` feature index in
+byte 2 and `0x00` in byte 3. Bytes 4 and 5 carry the CID, and the frame repeats
+with zeros on release.
 
-The receiver's own 15-second heartbeat is the only traffic on that receiver, so
-the listener and the callback are working. The MX Creative Keypad has the same
-signature and resolves it with the `0x0008` keepalive, but this remote has no
-`0x0008`.
+    11 04 0b 00 00 50 00 ...    CID 0x0050 down
+    11 04 0b 00 00 00 00 ...    release
 
-Options+ on another machine drives the remote fine, using this same receiver
-carried over and the same host slot. Brought back, the remote is silent again.
-The two snapshots in `snapshots/` differ by one byte in the whole device state:
-host slot 0 gained a 14-character name where it had none. The `0x0020` cookie is
-still zero and every divert bit is unchanged.
+Byte 3 echoes the function-and-software-id the host sent, so a frame with
+anything but `0x00` there is an ack rather than a press. Four CID slots follow,
+so more than one control can be down at once.
 
-So nothing persistent is written during setup, and there is no onboarding step
-to reproduce. Whatever makes the remote transmit, Options+ does at runtime and
-undoes by exiting.
+CID `0x0050` reports with nothing set up, because it is the one control the
+device already carries a divert bit for.
 
-That fits the rest of the picture. There is no `0x8100` OnboardProfiles, so the
-device stores no button assignments, and Options+ offers next-slide as one
-choice among several for each button. The remote cannot page a deck by itself.
-It can only report raw events and let software decide, which means a host that
-sends nothing gets nothing.
+Gyro motion arrives on the mouse collection as report `0x02`, nine bytes, with
+signed 16-bit X at bytes 3 and 4 and Y at bytes 5 and 6.
+
+    02 00 00 02 00 01 00 00 00    X +2, Y +1
+    02 00 00 fe ff f0 ff 00 00    X -2, Y -16
+
+That motion drives the system cursor, so the pointer works with no software at
+all. What Options+ adds is drawing over it and holding the cursor still.
+
+### A second HID++ client
+
+Frames carrying software id 8 appear during use, reading the feature table, the
+friendly name and the battery, none of which this project sends. macOS
+enumerates the device itself when it reconnects, so a listener sees another
+client's replies interleaved with its own. Matching a reply on the feature index
+and the function-and-software-id byte keeps them apart.
+
+The device also reconnects during ordinary use. `10 04 41 10 04 06 b5` is the
+receiver announcing device 4 is back, and a burst of enumeration follows it.
 
 ## Power and hosts
 
@@ -215,20 +223,14 @@ sends nothing gets nothing.
 
 ## Open questions
 
-1. Why the remote transmits nothing. This blocks everything else, since no
-   button can be mapped until some press reaches the host. See
-   [Silence](#silence).
-2. Whether writing a configuration cookie through `0x0020` function 1 changes
-   that, and whether onboarding the remote once through Options+ on any machine
-   does.
-3. Which CID belongs to which physical button. There are four buttons and ten
+1. Which CID belongs to which physical button. There are four buttons and ten
    controls, because the Highlight button is force-sensitive and reports soft
    and hard presses separately. `OPTIONS-PLUS.md` has the vendor's own mapping.
-4. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. Options+ has a
+2. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. Options+ has a
    haptic feedback panel and a timer, so the vibration motor and the timer are
    reachable over HID++ and live among these. `0x19b0` answers
    `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like durations.
-5. Why `getCidReporting` reports CID `0x0050` as already diverted when no
+3. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
-6. Whether raw XY delivers usable gyro deltas, and on which report.
-7. What the 29-byte digitizer collection carries.
+4. Whether raw XY delivers usable gyro deltas, and on which report.
+5. What the 29-byte digitizer collection carries.
