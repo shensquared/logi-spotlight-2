@@ -23,6 +23,15 @@ local TRIGGER_CID = "00d8"
 local RADIUS = 120       -- points
 local DIM = 0.75         -- 0 is clear, 1 is black
 local FOLLOW_HZ = 60
+-- 1 shows live content through the hole. Above 1 magnifies a snapshot taken
+-- when the button went down, which is why the view under the circle does not
+-- update while you hold it.
+--
+-- Anything above 1 needs Hammerspoon granted Screen Recording, in System
+-- Settings, Privacy & Security. Without it screen:snapshot() returns an empty
+-- image and the circle draws flat grey. The plain hole at 1 needs no
+-- permission at all.
+local MAGNIFY = 2.0
 
 local sock, canvas, follow
 local lastRx = 0
@@ -37,23 +46,38 @@ local shown = false
 local function build()
     local screen = hs.mouse.getCurrentScreen() or hs.screen.mainScreen()
     local frame = screen:fullFrame()
+
+    -- Taken before the canvas exists. Snapshotting once the overlay is up
+    -- captures the dim layer and the magnifier feeds on its own output.
+    local base = MAGNIFY > 1 and screen:snapshot() or nil
+
     local c = hs.canvas.new(frame)
     c[1] = {
         type = "rectangle",
         action = "fill",
         fillColor = { red = 0, green = 0, blue = 0, alpha = DIM },
     }
-    -- destinationOut removes what is already drawn wherever this shape is
-    -- opaque, so the circle is a hole in the dim layer rather than a disc on
-    -- top of it.
-    c[2] = {
-        type = "circle",
-        action = "fill",
-        fillColor = { white = 1, alpha = 1 },
-        compositeRule = "destinationOut",
-        center = { x = 0, y = 0 },
-        radius = RADIUS,
-    }
+    if base then
+        -- Clip to the circle, then lay the enlarged snapshot over the dim
+        -- layer inside it.
+        c[2] = { type = "circle", action = "clip",
+                 center = { x = 0, y = 0 }, radius = RADIUS }
+        c[3] = { type = "image", image = base, imageScaling = "scaleToFit",
+                 frame = { x = 0, y = 0, w = frame.w, h = frame.h } }
+        c[4] = { type = "resetClip" }
+    else
+        -- destinationOut removes what is already drawn wherever this shape is
+        -- opaque, so the circle is a hole in the dim layer showing live
+        -- content rather than a disc on top of it.
+        c[2] = {
+            type = "circle",
+            action = "fill",
+            fillColor = { white = 1, alpha = 1 },
+            compositeRule = "destinationOut",
+            center = { x = 0, y = 0 },
+            radius = RADIUS,
+        }
+    end
     c:level(hs.canvas.windowLevels.screenSaver)
     c:behavior(hs.canvas.windowBehaviors.canJoinAllSpaces)
     -- Clicks must reach whatever is underneath, or the overlay would swallow
@@ -63,9 +87,23 @@ local function build()
     return c, frame
 end
 
+-- Scaling the whole snapshot and sliding it under the circle costs two
+-- subtractions per frame. Cropping a fresh image each frame would allocate one
+-- instead, sixty times a second.
 local function moveTo(frame)
     local p = hs.mouse.absolutePosition()
-    canvas[2].center = { x = p.x - frame.x, y = p.y - frame.y }
+    local x, y = p.x - frame.x, p.y - frame.y
+    canvas[2].center = { x = x, y = y }
+    if MAGNIFY > 1 then
+        -- Place the enlarged image so the point under the cursor lands at the
+        -- centre of the circle.
+        canvas[3].frame = {
+            x = x - x * MAGNIFY,
+            y = y - y * MAGNIFY,
+            w = frame.w * MAGNIFY,
+            h = frame.h * MAGNIFY,
+        }
+    end
 end
 
 local function show()

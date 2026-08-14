@@ -68,6 +68,11 @@ The circle follows the system cursor rather than gyro deltas, because the remote
 already moves the cursor while a pointing control is held. `TRIGGER_CID` at the
 top of the module picks which button shows it.
 
+`MAGNIFY` enlarges what is under the circle. Above 1 it needs Hammerspoon
+granted Screen Recording, since it works from a snapshot taken as the button
+goes down; without the grant the circle draws flat grey. At 1 the circle is a
+hole onto live content and needs no permission.
+
 `M.preview(3)` shows the overlay for three seconds with no device attached, to
 check the drawing on its own.
 
