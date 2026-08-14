@@ -28,6 +28,7 @@ bin/listen 30          # print every report each collection emits, for 30 s
 bin/divert 45          # divert the 0x1B04 controls, print presses, then restore
 bin/divert 60 rawxy    # same, plus find the raw-XY bit and switch it on
 bin/probe              # call function 0 on the unnamed features
+bin/helper             # long-lived bridge, streams presses to a unix socket
 ```
 
 `bin/receiver` finds the remote wherever it is, so no receiver location or
@@ -45,6 +46,30 @@ cursor unaided.
 What remains is mapping the ten controls to the four physical buttons, and
 finding the vibration motor and the timer among the features that answer but
 have no published name.
+
+## Spotlight overlay
+
+`bin/helper` holds the remote and streams button presses over
+`/tmp/logi-spotlight.sock`. `hammerspoon/logi_spotlight.lua` connects to it and
+dims the screen around a bright circle while the trigger button is held.
+
+```sh
+ln -s "$PWD/hammerspoon/logi_spotlight.lua" ~/.hammerspoon/modules/
+./bin/helper &
+```
+
+Then from `init.lua`:
+
+```lua
+require("modules.logi_spotlight").start()
+```
+
+The circle follows the system cursor rather than gyro deltas, because the remote
+already moves the cursor while a pointing control is held. `TRIGGER_CID` at the
+top of the module picks which button shows it.
+
+`M.preview(3)` shows the overlay for three seconds with no device attached, to
+check the drawing on its own.
 
 `docs/PROTOCOL.md` records what the device has been observed to do, and what is
 still unknown.

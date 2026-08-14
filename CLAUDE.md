@@ -33,6 +33,7 @@ No Logitech software is installed, so nothing competes for the device.
 - `docs/PROTOCOL.md` is the wire-format reference. Read it before touching bytes.
 - `docs/OPTIONS-PLUS.md` is the vendor's own account of the buttons and effects,
   which sets the target for what a host has to reproduce.
+- `hammerspoon/` holds the Lua client that draws the overlay.
 - `src/*.c` are dependency-free IOKit probes, one concern each. Each file is
   self-contained, so the HID++ request and reply-matching code repeats across
   them rather than living in a shared header.
@@ -44,11 +45,23 @@ No Logitech software is installed, so nothing competes for the device.
 | `listen.c` | read-only report listener across every collection, never writes |
 | `divert.c` | divert the `0x1B04` controls, print presses, restore on exit |
 | `probe.c` | call function 0 on the features with no published name |
+| `helper.c` | long-lived bridge, diverts and streams presses to a unix socket |
 
 ## Build
 
 `make` puts binaries in `bin/`. Frameworks are IOKit and CoreFoundation. No
 third-party dependencies, and no network access is needed.
+
+## The bridge
+
+`helper.c` is long-lived for one reason: the divert bits are volatile and the
+remote sleeps within seconds, so something has to set them again on every wake.
+It re-diverts when the receiver announces the device is back, subid `0x41`, and
+again on a 30 second backstop.
+
+Commands go over a unix socket rather than stdin, because a Hammerspoon client
+cannot use stdin at all: `hs.task:setInput` only delivers data queued before
+`start()`.
 
 ## Gotchas
 
