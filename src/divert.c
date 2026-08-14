@@ -16,6 +16,19 @@
 #define TIMEOUT 1.2
 #define MAX_CIDS 32
 
+// Prompts printed during the listen, so a run is self-contained rather than
+// needing a script kept somewhere else. Edit these as the open questions in
+// docs/PROTOCOL.md change. Right now they chase the Highlight button, the only
+// one whose CIDs are unresolved, and whether raw XY streams motion.
+static const struct { int at; const char *say; } kScript[] = {
+    {  0, "HIGHLIGHT: gentle press, hold 2 s, three times" },
+    { 15, "hands off" },
+    { 20, "HIGHLIGHT: firm press, hold 2 s, three times" },
+    { 35, "hands off" },
+    { 40, "hold HIGHLIGHT gently and wave the remote around" },
+    { 55, "hands off until it exits" },
+};
+
 static IOHIDDeviceRef gDev = NULL;
 static uint8_t gResp[64];
 static int gHave = 0;
@@ -258,8 +271,14 @@ int main(int argc, char **argv) {
     printf("\nlistening %d s. Press each button in turn.\n"
            "Only frames with 0x00 in byte 3 are presses; acks are filtered.\n\n", secs);
     gListenStart = CFAbsoluteTimeGetCurrent();
-    for (int t = 0; t < secs && !gStop; t++)
+    for (int t = 0; t < secs && !gStop; t++) {
+        for (size_t i = 0; i < sizeof kScript / sizeof kScript[0]; i++)
+            if (kScript[i].at == t)
+                printf("\n>>> %2ds  %s\n\n", t, kScript[i].say);
+        if (t % 5 == 0) { printf("    [%2ds]\n", t); }
+        fflush(stdout);
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1.0, false);
+    }
 
     restoreAll();
     IOHIDDeviceClose(gDev, kIOHIDOptionsTypeNone);
