@@ -117,18 +117,38 @@ Whatever Options+ configures, it configures on the host.
 
 `0x1B04` sits at feature index `0x0b` and reports 10 controls.
 
-| # | CID | TID | Flags | xFlags | Capability |
+| # | CID | TID | Flags | xFlags | Observed as |
 |---|---|---|---|---|---|
-| 0 | `0x0050` | `0x0038` | `0x31` | `0x04` | mouse, reprog, divertable |
-| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | mouse, reprog, divertable, raw XY |
-| 2 | `0x01a8` | `0x00bb` | `0x31` | `0x07` | mouse, reprog, divertable, raw XY |
-| 3 | `0x00d9` | `0x00b6` | `0x30` | `0x04` | reprog, divertable |
-| 4 | `0x00da` | `0x00bc` | `0x30` | `0x07` | reprog, divertable, raw XY |
-| 5 | `0x00db` | `0x00b8` | `0x30` | `0x04` | reprog, divertable |
-| 6 | `0x00dc` | `0x00bd` | `0x30` | `0x07` | reprog, divertable, raw XY |
-| 7 | `0x00fb` | `0x00ce` | `0x30` | `0x04` | reprog, divertable |
-| 8 | `0x00fc` | `0x0062` | `0x20` | `0x04` | divertable |
-| 9 | `0x01b0` | `0x0116` | `0x30` | `0x04` | reprog, divertable |
+| 0 | `0x0050` | `0x0038` | `0x31` | `0x04` | Action, single click |
+| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | Action, press and hold |
+| 2 | `0x01a8` | `0x00bb` | `0x31` | `0x07` | not seen |
+| 3 | `0x00d9` | `0x00b6` | `0x30` | `0x04` | Next, single click |
+| 4 | `0x00da` | `0x00bc` | `0x30` | `0x07` | not seen |
+| 5 | `0x00db` | `0x00b8` | `0x30` | `0x04` | Back, single click |
+| 6 | `0x00dc` | `0x00bd` | `0x30` | `0x07` | Back, press and hold |
+| 7 | `0x00fb` | `0x00ce` | `0x30` | `0x04` | Highlight, one press |
+| 8 | `0x00fc` | `0x0062` | `0x20` | `0x04` | Highlight, most presses |
+| 9 | `0x01b0` | `0x0116` | `0x30` | `0x04` | one press, unattributed |
+
+Mapped by diverting all ten and pressing in timed groups, in
+`snapshots/2026-08-13-cid-mapping-run.txt`. The first six rows are solid: each
+fired the expected number of times in its own window and nothing else did.
+
+A press and a hold of the same button are separate CIDs, so the device does the
+timing. A double click is not: three double clicks on Action produced six
+`0x0050` frames in three tight pairs, 0.2 s apart, so the host counts those
+itself.
+
+The Highlight rows are not settled. Its presses produced `0x00fb` once, `0x01b0`
+once, then `0x00fc` five times, without a clean split between the gentle and
+firm groups.
+
+`0x01a8` and `0x00da` never fired. Both carry raw XY, as do `0x00d8` and
+`0x00dc`, which did fire on the two press-and-hold actions. `0x00d8` is the
+laser pointer per `OPTIONS-PLUS.md`, so raw XY tracks the actions that point.
+That makes `0x01a8` and `0x00da` the likely digital-pointer and spotlight
+controls, reachable only once raw XY is switched on rather than the divert bit
+alone.
 
 Flags byte, from `getCidInfo` function 1: `0x01` mouse button, `0x02` F-key,
 `0x04` hotkey, `0x10` reprogrammable, `0x20` divertable, `0x40` persistently
@@ -223,14 +243,15 @@ receiver announcing device 4 is back, and a burst of enumeration follows it.
 
 ## Open questions
 
-1. Which CID belongs to which physical button. There are four buttons and ten
-   controls, because the Highlight button is force-sensitive and reports soft
-   and hard presses separately. `OPTIONS-PLUS.md` has the vendor's own mapping.
+1. Which CIDs the Highlight button uses, and whether a soft and a firm press
+   are different controls. Three CIDs appeared across its presses with no clean
+   split.
 2. What `0x19b0`, `0x19c0`, `0x1a01`, `0x2250` and `0x1701` do. Options+ has a
    haptic feedback panel and a timer, so the vibration motor and the timer are
    reachable over HID++ and live among these. `0x19b0` answers
    `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like durations.
 3. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
-4. Whether raw XY delivers usable gyro deltas, and on which report.
+4. Whether setting the raw-XY bit makes `0x01a8` and `0x00da` fire, and what
+   they deliver.
 5. What the 29-byte digitizer collection carries.
