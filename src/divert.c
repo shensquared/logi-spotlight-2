@@ -26,6 +26,7 @@ static uint16_t gCid[MAX_CIDS];
 static uint8_t gWasDiverted[MAX_CIDS];
 static int gCidCount = 0;
 static volatile sig_atomic_t gStop = 0;
+static CFAbsoluteTime gListenStart = 0;
 
 static void onSig(int s) { (void)s; gStop = 1; CFRunLoopStop(CFRunLoopGetCurrent()); }
 
@@ -39,7 +40,9 @@ static void inputCB(void *ctx, IOReturn res, void *sender, IOHIDReportType type,
     // ack echoing back. Reading an ack as a press invents CIDs from the
     // request bytes.
     if (report[2] == gFeat1b04 && report[3] == 0x00) {
-        printf("  press  cid 0x%04x  |", (uint16_t)((report[4] << 8) | report[5]));
+        uint16_t cid = (uint16_t)((report[4] << 8) | report[5]);
+        printf("  %6.2fs  %s 0x%04x  |", CFAbsoluteTimeGetCurrent() - gListenStart,
+               cid ? "cid    " : "release", cid);
         for (CFIndex i = 0; i < 10 && i < len; i++) printf(" %02x", report[i]);
         printf("\n");
         fflush(stdout);
@@ -187,6 +190,7 @@ int main(int argc, char **argv) {
 
     printf("\nlistening %d s. Press each button in turn.\n"
            "Only frames with 0x00 in byte 3 are presses; acks are filtered.\n\n", secs);
+    gListenStart = CFAbsoluteTimeGetCurrent();
     for (int t = 0; t < secs && !gStop; t++)
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 1.0, false);
 
