@@ -1,8 +1,12 @@
 # What Options+ exposes
 
-Read off the Logi Options+ configuration screens for a Spotlight 2. This is the
-vendor's own account of the device, and it sets the target for what a host has
-to reproduce. `PROTOCOL.md` covers the wire format.
+Read off the Logi Options+ configuration screens for a Spotlight 2, and off the
+vendor's own [product page][product] and [support hub][hub]. This is the
+vendor's account of the device, and it sets the target for what a host has to
+reproduce. `PROTOCOL.md` covers the wire format.
+
+[product]: https://www.logitech.com/en-us/shop/p/spotlight-2-presenter-remote
+[hub]: https://hub.sync.logitech.com/spotlight-2
 
 ## Buttons
 
@@ -60,6 +64,13 @@ Pointer speed is a host-side scale factor, set to 50 percent by default.
 | Timer | disabled by default |
 | Haptic feedback | present, so the vibration motor is exposed to software |
 | Focus | present |
+
+The product page says the haptic buzz confirms a press of the Highlight button,
+so the motor fires on a button the host already sees as `0x00fb` and `0x00fc`.
+It also lists Magnify and Annotate as highlighting modes alongside Spotlight and
+Squarelight, and describes the Focus panel as a breathing exercise before
+presenting, which is the breathing experience the Action button double click
+triggers.
 
 The timer and the haptic motor are the two features that need something sent to
 the device rather than drawn on screen. Everything else is host-side rendering

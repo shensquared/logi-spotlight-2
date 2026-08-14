@@ -1,11 +1,15 @@
 # logi-spotlight-2
 
-Reading a Logitech Spotlight 2 presentation remote (`046D:B506`) from macOS over
-HID++, with no Logitech software installed.
+Driving a [Logitech Spotlight 2][product] presentation remote (`046D:B506`)
+from macOS over HID++, with no Logitech software installed.
 
-The remote's pointer and slide buttons already work as plain HID without any
-software. What needs a host is everything Logi Options+ draws or counts, namely
-the highlight overlay, the magnifier and the presentation timer.
+Holding the top button moves the system cursor, and that much works with
+nothing installed. Everything else the vendor advertises is drawn or counted by
+Logi Options+ on the host, so a host has to supply it. That covers the highlight
+overlay, the magnifier, the timer, and the slide buttons, which page nothing on
+their own.
+
+[product]: https://www.logitech.com/en-us/shop/p/spotlight-2-presenter-remote
 
 ## Build
 
