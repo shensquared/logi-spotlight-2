@@ -15,18 +15,25 @@
 #define VID_LOGITECH 0x046D
 #define TIMEOUT 1.2
 #define MAX_CIDS 32
+#define MAX_SIBLINGS 8
 
 // Prompts printed during the listen, so a run is self-contained rather than
 // needing a script kept somewhere else. Edit these as the open questions in
 // docs/PROTOCOL.md change. Right now they chase the Highlight button, the only
 // one whose CIDs are unresolved, and whether raw XY streams motion.
+// Buttons are described by where they sit, not by name. Naming them produced
+// two runs that disagreed about which button 0x00d8 belongs to, with no way to
+// tell from the logs which one was actually pressed.
 static const struct { int at; const char *say; } kScript[] = {
-    {  0, "HIGHLIGHT: gentle press, hold 2 s, three times" },
-    { 15, "hands off" },
-    { 20, "HIGHLIGHT: firm press, hold 2 s, three times" },
-    { 35, "hands off" },
-    { 40, "hold HIGHLIGHT gently and wave the remote around" },
-    { 55, "hands off until it exits" },
+    {  0, "BIG round button on the TOP FACE: three short clicks" },
+    { 12, "hands off" },
+    { 16, "BIG round button on the TOP FACE: press and HOLD 3 s, three times" },
+    { 32, "hands off" },
+    { 36, "SIDE button on the RIGHT EDGE: three short clicks" },
+    { 48, "hands off" },
+    { 52, "SIDE button on the RIGHT EDGE: press and HOLD 3 s, three times" },
+    { 68, "hands off" },
+    { 72, "hold the BIG TOP button down and WAVE the remote around" },
 };
 
 static IOHIDDeviceRef gDev = NULL;
@@ -43,6 +50,8 @@ static uint8_t gRawOn = 0, gRawOff = 0;
 static int gCidCount = 0;
 static volatile sig_atomic_t gStop = 0;
 static CFAbsoluteTime gListenStart = 0;
+static int32_t gSibPage[MAX_SIBLINGS], gSibUsage[MAX_SIBLINGS];
+static int gSibCount = 0;
 
 static void onSig(int s) { (void)s; gStop = 1; CFRunLoopStop(CFRunLoopGetCurrent()); }
 
@@ -73,6 +82,20 @@ static void inputCB(void *ctx, IOReturn res, void *sender, IOHIDReportType type,
     memcpy(gResp, report, len > (CFIndex)sizeof gResp ? (CFIndex)sizeof gResp : len);
     gHave = err ? -1 : 1;
     CFRunLoopStop(CFRunLoopGetCurrent());
+}
+
+// The remote's other collections on the same receiver. Raw XY is meant to move
+// motion off these and onto HID++, so seeing both at once is the only way to
+// tell "no motion anywhere" from "motion still going where it always did".
+static void siblingCB(void *ctx, IOReturn res, void *sender, IOHIDReportType type,
+                      uint32_t reportID, uint8_t *report, CFIndex len) {
+    (void)res; (void)sender; (void)type;
+    int slot = (int)(intptr_t)ctx;
+    printf("  %6.2fs  %04x:%04x  id=%02x |", CFAbsoluteTimeGetCurrent() - gListenStart,
+           gSibPage[slot], gSibUsage[slot], reportID);
+    for (CFIndex i = 0; i < len && i < 9; i++) printf(" %02x", report[i]);
+    printf("\n");
+    fflush(stdout);
 }
 
 static int hidpp(uint8_t devIdx, uint8_t featIdx, uint8_t func,
@@ -268,8 +291,24 @@ int main(int argc, char **argv) {
         }
     }
 
-    printf("\nlistening %d s. Press each button in turn.\n"
-           "Only frames with 0x00 in byte 3 are presses; acks are filtered.\n\n", secs);
+    int32_t loc = propInt(gDev, CFSTR(kIOHIDLocationIDKey));
+    static uint8_t sbuf[MAX_SIBLINGS][1024];
+    for (CFIndex i = 0; i < n && gSibCount < MAX_SIBLINGS; i++) {
+        if (devs[i] == gDev) continue;
+        if (propInt(devs[i], CFSTR(kIOHIDLocationIDKey)) != loc) continue;
+        int slot = gSibCount++;
+        gSibPage[slot] = propInt(devs[i], CFSTR(kIOHIDPrimaryUsagePageKey));
+        gSibUsage[slot] = propInt(devs[i], CFSTR(kIOHIDPrimaryUsageKey));
+        IOHIDDeviceOpen(devs[i], kIOHIDOptionsTypeNone);
+        IOHIDDeviceRegisterInputReportCallback(devs[i], sbuf[slot], sizeof sbuf[slot],
+                                               siblingCB, (void *)(intptr_t)slot);
+        IOHIDDeviceScheduleWithRunLoop(devs[i], CFRunLoopGetCurrent(),
+                                       kCFRunLoopDefaultMode);
+    }
+
+    printf("\nlistening %d s, plus %d sibling collections on this receiver.\n"
+           "Only frames with 0x00 in byte 3 are presses; acks are filtered.\n\n",
+           secs, gSibCount);
     gListenStart = CFAbsoluteTimeGetCurrent();
     for (int t = 0; t < secs && !gStop; t++) {
         for (size_t i = 0; i < sizeof kScript / sizeof kScript[0]; i++)
