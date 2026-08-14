@@ -134,27 +134,34 @@ int main(int argc, char **argv) {
     IOHIDDeviceRef *devs = malloc(sizeof(IOHIDDeviceRef) * n);
     CFSetGetValues(set, (const void **)devs);
 
+    // The remote drops off its receiver when idle and comes back on a press,
+    // so a single scan finds nothing more often than not. Keep scanning.
     char name[64] = {0};
-    for (CFIndex i = 0; i < n && !gDevIdx; i++) {
-        int32_t page = propInt(devs[i], CFSTR(kIOHIDPrimaryUsagePageKey));
-        if (page != 0xFF00 && page != 0xFF43) continue;
-        gDev = devs[i];
-        IOHIDDeviceOpen(gDev, kIOHIDOptionsTypeNone);
-        static uint8_t rbuf[64];
-        IOHIDDeviceRegisterInputReportCallback(gDev, rbuf, sizeof rbuf, inputCB, NULL);
-        IOHIDDeviceScheduleWithRunLoop(gDev, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-        int lo = page == 0xFF43 ? 0xFF : 1, hi = page == 0xFF43 ? 0xFF : 6;
-        for (int d = lo; d <= hi; d++) {
-            if (hidpp((uint8_t)d, 0x00, 0x00, 0x00, 0x01, 0x00) != 1) continue;
-            readName((uint8_t)d, name, sizeof name);
-            if (strstr(name, "Spotlight")) { gDevIdx = (uint8_t)d; break; }
+    for (int attempt = 0; attempt < 15 && !gDevIdx && !gStop; attempt++) {
+        if (attempt == 1) printf("asleep, press any button on the remote to wake it\n");
+        for (CFIndex i = 0; i < n && !gDevIdx; i++) {
+            int32_t page = propInt(devs[i], CFSTR(kIOHIDPrimaryUsagePageKey));
+            if (page != 0xFF00 && page != 0xFF43) continue;
+            gDev = devs[i];
+            IOHIDDeviceOpen(gDev, kIOHIDOptionsTypeNone);
+            static uint8_t rbuf[64];
+            IOHIDDeviceRegisterInputReportCallback(gDev, rbuf, sizeof rbuf, inputCB, NULL);
+            IOHIDDeviceScheduleWithRunLoop(gDev, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
+            int lo = page == 0xFF43 ? 0xFF : 1, hi = page == 0xFF43 ? 0xFF : 6;
+            for (int d = lo; d <= hi; d++) {
+                if (hidpp((uint8_t)d, 0x00, 0x00, 0x00, 0x01, 0x00) != 1) continue;
+                readName((uint8_t)d, name, sizeof name);
+                if (strstr(name, "Spotlight")) { gDevIdx = (uint8_t)d; break; }
+            }
+            if (!gDevIdx) {
+                IOHIDDeviceUnscheduleFromRunLoop(gDev, CFRunLoopGetCurrent(),
+                                                 kCFRunLoopDefaultMode);
+                IOHIDDeviceClose(gDev, kIOHIDOptionsTypeNone);
+            }
         }
-        if (!gDevIdx) {
-            IOHIDDeviceUnscheduleFromRunLoop(gDev, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);
-            IOHIDDeviceClose(gDev, kIOHIDOptionsTypeNone);
-        }
+        if (!gDevIdx) CFRunLoopRunInMode(kCFRunLoopDefaultMode, 2.0, false);
     }
-    if (!gDevIdx) { printf("Spotlight not found or asleep\n"); return 1; }
+    if (!gDevIdx) { printf("Spotlight never woke\n"); return 1; }
     printf("\"%s\" at device index 0x%02x\n", name, gDevIdx);
 
     gFeat1b04 = findFeat(gDevIdx, 0x1b04);
