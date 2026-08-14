@@ -120,7 +120,7 @@ Whatever Options+ configures, it configures on the host.
 | # | CID | TID | Flags | xFlags | Observed as |
 |---|---|---|---|---|---|
 | 0 | `0x0050` | `0x0038` | `0x31` | `0x04` | Action, single click |
-| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | Action, press and hold |
+| 1 | `0x00d8` | `0x00b7` | `0x31` | `0x07` | a press and hold, button disputed |
 | 2 | `0x01a8` | `0x00bb` | `0x31` | `0x07` | not seen |
 | 3 | `0x00d9` | `0x00b6` | `0x30` | `0x04` | Next, single click |
 | 4 | `0x00da` | `0x00bc` | `0x30` | `0x07` | not seen |
@@ -139,9 +139,24 @@ timing. A double click is not: three double clicks on Action produced six
 `0x0050` frames in three tight pairs, 0.2 s apart, so the host counts those
 itself.
 
-The Highlight rows are not settled. Its presses produced `0x00fb` once, `0x01b0`
-once, then `0x00fc` five times, without a clean split between the gentle and
-firm groups.
+`0x00d8` is not settled. One run attributes it to holding Action, another to
+holding Highlight, and both are self-consistent. The runs named buttons rather
+than locating them, so which one was pressed is not recoverable from the logs.
+
+The Highlight rows are not settled either. One run produced `0x00fb` once,
+`0x01b0` once and `0x00fc` five times across its presses, with no clean split
+between the gentle and firm groups.
+
+### Raw XY delivers no motion
+
+With raw XY confirmed set on all four capable controls, holding a control down
+and waving the remote for fifteen seconds produced only press and release
+frames, in `snapshots/2026-08-14-highlight-rawxy-run.txt`. No streaming deltas
+arrived on the vendor collection.
+
+That run watched only the vendor collection, so it cannot say whether motion
+kept flowing to the mouse collection or stopped. Until a run watches both at
+once, raw XY is set and doing nothing observable.
 
 `0x01a8` and `0x00da` never fired. Both carry raw XY, as do `0x00d8` and
 `0x00dc`, which did fire on the two press-and-hold actions. `0x00d8` is the
@@ -268,6 +283,6 @@ receiver announcing device 4 is back, and a burst of enumeration follows it.
    `00 1f 00 3c 00 0f ff ff`, whose `0x3c` and `0x0f` read like durations.
 3. Why `getCidReporting` reports CID `0x0050` as already diverted when no
    software has set it.
-4. Whether setting the raw-XY bit makes `0x01a8` and `0x00da` fire, and what
-   they deliver.
+4. Where raw XY sends motion. Setting it made neither `0x01a8` nor `0x00da`
+   fire and produced no deltas on the vendor collection.
 5. What the 29-byte digitizer collection carries.

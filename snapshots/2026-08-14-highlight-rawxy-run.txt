@@ -1,0 +1,18 @@
+# divert 60 rawxy, script prompting for Highlight gentle / firm / wave
+# Which physical button was pressed is unconfirmed; see PROTOCOL.md.
+listening 60 s
+     5.18s  cid     0x0050
+     6.84s  cid     0x00d8   held 0.79 s
+     9.53s  cid     0x00d8   held 0.79 s
+>>> 20s firm press
+    22.60s  cid     0x00d8   held 0.96 s
+    26.14s  cid     0x00d8   held 1.50 s
+    30.47s  cid     0x00d8   held 1.25 s
+>>> 40s hold and wave
+    44.84s  cid     0x00d8   held 0.98 s
+    47.33s  cid     0x00d8   held 0.39 s
+    49.97s  cid     0x00d8   held 1.22 s
+    52.81s  cid     0x00d8   held 1.64 s
+# No motion frames at any point, with raw XY confirmed set on
+# 0x00d8, 0x01a8, 0x00da and 0x00dc. Gentle and firm produced the
+# same CID. 0x00da and 0x01a8 still never fired.
